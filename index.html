@@ -1,0 +1,139 @@
+<html >
+    <head>
+    <title>Random Forest</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+        <style  rel='stylesheets' type="text/css" href="/style.css" ></style>
+    </head>
+    <body style="background-color: black">
+            <h1 style="margin-left:40%;color:royalblue">Random Forest & Neural Network</h1><br><br>
+
+            <div id="cabecalho" style="margin-left:25%;border-style:solid;border-width:medium;border-radius:10px;width:500px;height:auto;padding:50px;background-color: white">
+             
+                <label>Idade:</label>
+                <input id="age" name="age" required type="number" style="width:80px;height:30px;border-radius:10px;border-color: black" ><br><br>
+                <label>Salário:</label>
+                <input id="salary" name="salary" required type="number" style="width:180px;height:30px;border-radius:10px;border-color: black" ><br><br>
+                <label>Emprestimo:</label>
+                <input id="loan" name="loan" required type="number" style="width:180px;height:30px;border-radius:10px;border-color: black"  ><br><br><br>
+                <input type="submit" value="Enviar" onclick="javascript:makePredict();"  style="width:100px;height:30px;border-radius:10px;border-color: black; background-color: cyan" >                
+                <br><br>
+               <br><br><br>
+               <div id="result">
+
+               </div>
+            </div>
+
+    </body>
+
+    <script type="text/javascript" src="js/jquery-1.7.2.min.js"></script>
+    <script type="text/javascript" src="js/jquery.csv.js"></script>
+    <script type="text/javascript"  src="js/randomforest.js"></script>
+    <script type="text/javascript" src="js/svm.js"></script>
+    <script type="text/javascript">
+    
+      //Variáveis de inicialização  
+      var data = []
+      var dataFormated = []
+      var attributes = []
+      var labels = []
+      //Opções do Random Forest
+      var options = {};
+      options.numTrees = 300; 
+      options.maxDepth = 15;
+      options.numTries = 10;
+      //Instanciando Random forest
+      var rforest = new forestjs.RandomForest()
+      //Instanciando Rede Neural
+      var svm = new svmjs.SVM()
+        
+      //Função principal  
+      function  main(){
+           //Formatação dos dados
+           loadCSV()  
+           objectToArray()  
+           formatData()
+           //Random Forests 
+           trainDataRforest()
+           //Neural Networks
+           trainDataNnetwork()
+
+      }
+
+      //Obtendo os dados via ajax
+      function  loadCSV(){
+            $.ajax({
+                url:'doc/data.csv',
+                async:false,
+                dataType:'text',
+                success:function(d){
+                    //Verificando se os dados existem.
+                    if(d){
+                        //Recebendo os dados convertido em objeto
+                        data = $.csv.toObjects(d);
+                    }else{
+                        //Se não existir dados mostrar essa mensagem no console
+                        console.log('File it is empty.')
+                    }
+                },
+                //Função será chamada caso ocorra algum erro ao tentar carregar o arquivo csv
+                error:function(){
+                    console.log('Erro in the try load the file csv.')
+                }
+
+            })
+      } 
+      //Função que converte objeto em array
+      function objectToArray(){
+          //Percorrendo todos os obejto e o transformando em array
+          for(var i = 0;i < Object.keys(data).length; i++){
+              //Armazenando arrays
+              dataFormated.push([parseInt(data[i]['salario']),parseInt(data[i]['idade']),parseInt(data[i]['emprestimo']),parseInt(data[i]['rotulo'])])
+          }
+      }
+      //Formatando os dados
+      function formatData(){
+          //Percorrendo arrays
+          for(var j=0;j < dataFormated.length; j++){
+              //Verificando se existem colunas vazias ou números ilegais
+                if(!isNaN(dataFormated[j][1]) && dataFormated[j][1] > 0 ){
+                    if(dataFormated[j][3] == 0){
+                        //Tranformando os números 0 em -1
+                       dataFormated[j][3] =  -1
+                    }
+                    //Obtendo os atributos
+                    attributes.push(dataFormated[j].slice(0,3))
+                    //Obtendo a label
+                    labels.push(dataFormated[j][3])
+                }
+          }
+      }
+      //Função de treino do Random Forest
+      function trainDataRforest(){
+          rforest.train(attributes,labels,options)
+      }
+      //Função de treino do Rede Neural
+      function trainDataNnetwork(){
+        svm.train(attributes, labels, { C: 3, numpasses: 100 });
+      }
+
+      function makePredict(){
+        //Recebendo valores do DOM  
+        age = document.getElementById('age').value;
+        salary = document.getElementById('salary').value;
+        loan = document.getElementById('loan').value;
+        //Recebendo a probabilidade da Random forest
+        labelProbability = rforest.predictOne([salary,age,loan])
+        //Recebendo a probabilidade da Rede Neural
+        testlabels = svm.predict([[salary,age,loan]]);
+        //Passando Resultado para DOM
+        $('#result').append('<label>Probabilidade:'+labelProbability+'</label><br><label>Rede Neural:'+testlabels+'</label><br>')       
+      }
+
+      //Chamando a função principal  
+      main() 
+
+    
+
+    </script>   
+
+ </html>
